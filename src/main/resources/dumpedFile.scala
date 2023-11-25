@@ -1,8 +1,10 @@
 package com.rockthejvm.foundations
 
+import cats.{Defer, MonadError}
 import cats.effect.*
 
 import java.io.{File, FileWriter, PrintWriter}
+import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.*
 import scala.io.StdIn
 import scala.util.Random
@@ -93,11 +95,63 @@ object CatsEffect extends /*IOApp*/ IOApp.Simple {
     destination <- copiedFileResource
   } yield (source, destination)
 
-  val copyFileEffect = compositeResource.use { // use method is for writing the logic, producing the effect.
+  val copyFileEffect = compositeResource.use {
     case (source, destination) => IO(source.getLines().foreach(destination.println))
   }
-]
+
+
+  // abstract kinds of computation
+
+  // MonadCancel = cancelable computations
+  trait MyMonadCancel[F[_], E] extends MonadError[F, E] {
+    trait CancellationFlagResetter {
+      def apply[A](fa: F[A]): F[A] // You can use this argument to mark certain pieces of your IO in `IO.uncancelable(_ => delayedPrint.onCancel(IO(println("I'm cancelled!")))).start` in `ignoredCancellation` to be uncancelable and some not to be cancelable.
+    }
+
+    def canceled: F[Unit] // This is the definition of a cancelled computation. If I changed some of these IOs (e.g. copiedFileResource etc...) and in the middle I do IO.canceled, the rest of the chain will not EXECUTED!
+
+    def uncancelable[A](poll: CancellationFlagResetter => F[A]): F[A]
+  }
+
+  // monadCancel is not used explicited. Normally we use IO, which is enough
+  val monadCancelIO: MonadCancel[IO, Throwable] = MonadCancel[IO]
   val uncancelableIO = monadCancelIO.uncancelable(_ => IO(42)) // same as IO.uncancelable(...)
+
+  // Spawn = ability to create fibers
+  trait MyGenSpawn[F[_], E] extends MonadCancel[F, E] {
+    // fundamental API:
+    def start[A](fa: F[A]): F[Fiber[F, E, A]] // creates a fiber
+    // never, cede, racePair are other useful APIs...
+  }
+
+  trait MySpawn[F[_]] extends GenSpawn[F, Throwable]
+
+  val spawnIO = Spawn[IO]
+  val fiber = spawnIO.start(delayedPrint) // creates a fiber, same as delayedPrint.start
+
+  // Concurrent = concurrency primitives (atomic references + promises)
+  trait MyConcurrent[F[_]] extends Spawn[F] {
+    def ref[A](a: A): F[Ref[F, A]]
+    def deferred[A]: F[Deferred[F, A]] // for `promises` data structures
+    /* Note that with ref+deferred, cyclic barriers, countdown latches, semaphores, mutexes can all be created. More powerful type classes! */
+  }
+
+  // Temporal = ability to suspend computations for a given time
+  trait MyTemporal[F[_]] extends Concurrent[F] {
+    def sleep(time: FiniteDuration): F[Unit]
+  }
+
+  // Sync = ability to suspend synchronous arbitrary expressions in an effect
+  trait MySync[F[_]] extends MonadCancel[F, Throwable] with Defer[F] {
+    def delay[A](expression: => A): F[A]
+    def blocking[A](expression: => A): F[A] // blocking will run that particular effect that we obtain at the end on a dedicated thread pool so that we don't starve our original thread pool for effects for threads.
+  }
+
+  // Async = ability to suspend asynchronous computations (i.e. on other thread pools) into an effect managed by Cats-Effect
+  trait MyAsync[F[_]] extends Sync[F] with Temporal[F] {
+    def executionContext: F[ExecutionContext]
+    def async[A](cb: (Either[Throwable, A] => Unit) => F[Option[F[Unit]]]): F[A] // too complicated. See cats-effect lesson
+  }
 
   // CE apps have a "run" method returning an IO, which will internally be evaluated in a main function.
 //  override def run: IO[Unit] = smallProgram()
