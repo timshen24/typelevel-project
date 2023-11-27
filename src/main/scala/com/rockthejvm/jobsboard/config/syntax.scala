@@ -7,11 +7,15 @@ import cats.implicits.*
 import pureconfig.error.ConfigReaderException
 import scala.reflect.ClassTag
 
+// This one is for refactoring purposes. See 'Backend Scaffolding', 27:30mins why refactor offers better readability.
 object syntax {
-  extension (source: ConfigSource) 
-    def loadF[F[_], A](using reader: ConfigReader[A], F: MonadThrow[F], tag: ClassTag[A]/* What does this mean? */): F[A] = 
-      F.pure(source.load[A]/* Either[Errors, A] */).flatMap { 
-        case Left(errors) => F.raiseError[A](ConfigReaderException(errors))
-        case Right(value) => F.pure(value)
-      } 
+  extension (source: ConfigSource)
+    def loadF[F[_], A: ClassTag /* What does this mean? */ ](using
+        reader: ConfigReader[A],
+        F: MonadThrow[F]
+    ): F[A] =
+      F.pure(source.load[A] /* Either[Errors, A] */ ).flatMap {
+        case Left(errors)  => F.raiseError[A](ConfigReaderException(errors))
+        case Right(config) => F.pure(config) // EmberConfig instance
+      }
 }
