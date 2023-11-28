@@ -8,6 +8,7 @@ import org.http4s.server.*
 import org.http4s.circe.CirceEntityCodec.*
 import cats.effect.*
 import cats.implicits.*
+import org.typelevel.log4cats.Logger
 
 import scala.collection.mutable
 import java.util.UUID
@@ -15,7 +16,7 @@ import com.rockthejvm.jobsboard.domain.Job.*
 import com.rockthejvm.jobsboard.http.responses.*
 
 // 为什么在Jobs Endpoints implementation课里（16:00处）把最初的Mond改成了Concurrent？Circe的要求
-class JobRoutes[F[_]: Concurrent] private extends Http4sDsl[F] {
+class JobRoutes[F[_]: Concurrent: Logger] private extends Http4sDsl[F] {
   // "database"
   private val database = mutable.Map[UUID, Job]()
 
@@ -42,12 +43,18 @@ class JobRoutes[F[_]: Concurrent] private extends Http4sDsl[F] {
       active = true
     ).pure[F]
 
+  import com.rockthejvm.jobsboard.logging.syntax.*
   // Test case: http post localhost:4041/api/jobs/create company='Rock the JVM' title='Software Engineer' description='best job' externalUrl='rockthejvm.com' remote=false location='NYC'
   private val createJobRoute: HttpRoutes[F] = HttpRoutes.of[F] { case req @ POST -> Root / "create" =>
     for {
-      jobInfo <- req.as[JobInfo] // F[JobInfo]
-      job     <- createJob(jobInfo)
-      resp    <- Created(job.id)
+      // _ <- Logger[F].info("Trying to add job")
+      // http post localhost:4041/api/jobs/create < src/main/resources/payloads/jobinfo.json
+      jobInfo <- req.as[JobInfo].logError(e => s"Parsing payload failed: $e") // F[JobInfo]
+      // _       <- Logger[F].info(s"Parsed job info: $jobInfo")
+      job <- createJob(jobInfo)
+      // _       <- Logger[F].info(s"Created job: $job")
+      _    <- database.put(job.id, job).pure[F] // FP里面一个没有Type parameter的语句，在for里面用pure方法强行加上F[...]
+      resp <- Created(job.id)
     } yield resp
   }
 
@@ -80,5 +87,5 @@ class JobRoutes[F[_]: Concurrent] private extends Http4sDsl[F] {
 }
 
 object JobRoutes {
-  def apply[F[_]: Concurrent] = new JobRoutes[F]
+  def apply[F[_]: Concurrent: Logger] = new JobRoutes[F]
 }

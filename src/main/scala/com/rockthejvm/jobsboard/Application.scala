@@ -11,10 +11,12 @@ import cats.effect.*
 import org.http4s.ember.server.EmberServerBuilder
 import pureconfig.ConfigSource
 import pureconfig.error.ConfigReaderException
+import org.typelevel.log4cats.Logger
 
 import com.rockthejvm.jobsboard.http.routes.*
 import com.rockthejvm.jobsboard.config.*
 import com.rockthejvm.jobsboard.config.syntax.loadF
+import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 /** 1 - add a plain health endpoint to our app 
   * 2 - add minimal configuration 
@@ -26,6 +28,7 @@ import com.rockthejvm.jobsboard.config.syntax.loadF
   */
 
 object Application extends IOApp.Simple {
+  given logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
   override def run: IO[Unit] = ConfigSource.default.loadF[IO, EmberConfig].flatMap { config =>
     EmberServerBuilder
