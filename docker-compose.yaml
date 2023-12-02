@@ -1,5 +1,7 @@
 version: '3.1'
-
+# Used in lesson "Running Jobs 'Algebra'"
+# How to execute: docker-compose up & docker exec -it rockthejvm-projects-db-1 psql -U docker
+# \c board; \dt; select * from jobs;
 services:
   db:
     image: postgres

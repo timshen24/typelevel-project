@@ -25,28 +25,6 @@ trait Jobs[F[_]] {
   def delete(id: UUID): F[Int]
 }
 
-/*
-      id: UUID,
-      date: Long,
-      ownerEmail: String,
-      jobInfo: JobInfo,
-      active: Boolean,
-      company: String,
-      title: String,
-      description: String,
-      externalUrl: String,
-      remote: Boolean,
-      salaryLo: Option[Int],
-      salaryHi: Option[Int],
-      currency: Option[String],
-      location: String,
-      country: Option[String],
-      tags: Option[List[String]],
-      image: Option[String],
-      seniority: Option[String],
-      other: Option[String],
-      active: Boolean
- */
 class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[F] {
   override def create(ownerEmail: String, jobInfo: JobInfo): F[UUID] =
     sql"""
@@ -144,6 +122,7 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
       .query[Job]
       .option
       .transact(xa)
+
   override def update(id: UUID, jobInfo: JobInfo): F[Option[Job]] =
     sql"""
       UPDATE jobs
@@ -161,7 +140,7 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
         tags = ${jobInfo.tags},
         image = ${jobInfo.image},
         seniority = ${jobInfo.seniority},
-        other = ${jobInfo.other},
+        other = ${jobInfo.other}
       WHERE id = ${id}  
     """.update.run
       .transact(xa)

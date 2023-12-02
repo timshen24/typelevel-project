@@ -48,9 +48,7 @@ object Cats extends App {
 //  val flatMapList = FlatMap[List]
 //  val flattedMappedList = flatMapList.flatMap(List(1, 2, 3))(x => List(x, x + 1))
   import cats.syntax.flatMap.*
-  def crossProduct[F[
-      _
-  ]: FlatMap /* Means there must be a given FlatMap type or an implicit FlatMap type in scope*/, A, B](
+  def crossProduct[F[_]: FlatMap /* Means there must be a given FlatMap type or an implicit FlatMap type in scope*/, A, B](
       containerA: F[A],
       containerB: F[B]
   ): F[(A, B)] =
