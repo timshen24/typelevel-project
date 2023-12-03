@@ -30,14 +30,15 @@ import com.rockthejvm.jobsboard.config.syntax.loadF
 object Application extends IOApp.Simple {
   given logger: Logger[IO] = Slf4jLogger.getLogger[IO]
 
-  override def run: IO[Unit] = ConfigSource.default.loadF[IO, EmberConfig].flatMap { config =>
+  override def run: IO[Unit] = ConfigSource.default.loadF[IO, AppConfig].flatMap { case AppConfig(postgresConfig, emberConfig) =>
     val appResource = for {
-      core    <- Core[IO]
+      xa      <- Database.makePostgresResource[IO](postgresConfig)
+      core    <- Core[IO](xa)
       httpApi <- HttpApi[IO](core)
       server <- EmberServerBuilder
         .default[IO]
-        .withHost(config.host) // String, need Host
-        .withPort(config.port) // String, need Port
+        .withHost(emberConfig.host) // String, need Host
+        .withPort(emberConfig.port) // String, need Port
         // .withHttpApp(HealthRoutes[IO].routes.orNotFound) // In lesson 'Backend Scaffolding', on terminal: type in `http GET 'localhost:8080/health'`
         .withHttpApp(
           httpApi.endpoints.orNotFound
