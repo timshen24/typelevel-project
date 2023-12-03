@@ -5,9 +5,11 @@ import doobie.*
 import doobie.implicits.*
 import doobie.util.*
 import doobie.hikari.HikariTransactor
+import scala.io.StdIn
+
 import com.rockthejvm.jobsboard.core.*
 import com.rockthejvm.jobsboard.domain.Job.JobInfo
-import scala.io.StdIn
+import com.rockthejvm.jobsboard.modules.Core.*
 
 /**
   * Begins with lesson "Running Jobs'Algebra'"
@@ -21,16 +23,17 @@ import scala.io.StdIn
   */
 object JobsPlayground extends IOApp.Simple {
 
-  val postgresResource: Resource[IO, HikariTransactor[IO]] = for {
-    ec <- ExecutionContexts.fixedThreadPool(32)
-    xa <- HikariTransactor.newHikariTransactor[IO](
-      "org.postgresql.Driver",
-      "jdbc:postgresql:board",
-      "docker",
-      "docker",
-      ec
-    )
-  } yield xa
+  // Copy it to core in Lesson 'A Full Jobs CRUD App'
+  // val postgresResource: Resource[IO, HikariTransactor[IO]] = for {
+  //   ec <- ExecutionContexts.fixedThreadPool(32)
+  //   xa <- HikariTransactor.newHikariTransactor[IO](
+  //     "org.postgresql.Driver",
+  //     "jdbc:postgresql:board",
+  //     "docker",
+  //     "docker",
+  //     ec
+  //   )
+  // } yield xa
 
   val jobInfo = JobInfo.minimal(
     company = "Rock the JVM",
@@ -41,7 +44,7 @@ object JobsPlayground extends IOApp.Simple {
     location = "Anywhere"
   )
 
-  override def run: IO[Unit] = postgresResource.use { xa =>
+  override def run: IO[Unit] = postgresResource[IO].use { xa =>
     for {
       jobs      <- LiveJobs[IO](xa)
       _         <- IO(println("Ready. Next ...")) *> IO(StdIn.readLine)
