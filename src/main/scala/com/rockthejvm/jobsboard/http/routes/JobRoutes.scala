@@ -13,7 +13,7 @@ import org.typelevel.log4cats.Logger
 import scala.collection.mutable
 import java.util.UUID
 import com.rockthejvm.jobsboard.core.*
-import com.rockthejvm.jobsboard.domain.Job.*
+import com.rockthejvm.jobsboard.domain.job.*
 import com.rockthejvm.jobsboard.http.responses.*
 import com.rockthejvm.jobsboard.logging.syntax.*
 

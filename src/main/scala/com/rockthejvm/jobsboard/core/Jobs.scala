@@ -3,7 +3,7 @@ package com.rockthejvm.jobsboard.core
 import cats.*
 import cats.effect.*
 import cats.implicits.*
-import com.rockthejvm.jobsboard.domain.Job.*
+import com.rockthejvm.jobsboard.domain.job.*
 import java.util.UUID
 import doobie.*
 import doobie.implicits.*

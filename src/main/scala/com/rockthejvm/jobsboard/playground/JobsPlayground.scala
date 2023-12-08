@@ -8,7 +8,7 @@ import doobie.hikari.HikariTransactor
 import scala.io.StdIn
 
 import com.rockthejvm.jobsboard.core.*
-import com.rockthejvm.jobsboard.domain.Job.JobInfo
+import com.rockthejvm.jobsboard.domain.job.JobInfo
 import com.rockthejvm.jobsboard.modules.Core.*
 
 /**

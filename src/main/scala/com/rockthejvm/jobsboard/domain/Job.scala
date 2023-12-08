@@ -2,7 +2,7 @@ package com.rockthejvm.jobsboard.domain
 
 import java.util.UUID
 
-object Job {
+object job {
   case class Job(
       id: UUID,
       date: Long,
