@@ -15,10 +15,11 @@ import java.util.UUID
 import com.rockthejvm.jobsboard.core.*
 import com.rockthejvm.jobsboard.domain.job.*
 import com.rockthejvm.jobsboard.http.responses.*
+import com.rockthejvm.jobsboard.http.validation.syntax.*
 import com.rockthejvm.jobsboard.logging.syntax.*
 
 // 为什么在Jobs Endpoints implementation课里（16:00处）把最初的Mond改成了Concurrent？Circe的要求
-class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends Http4sDsl[F] {
+class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends HttpValidationDsl[F] {
   // "database" removed in Lesson "A Full jobs CRUD App"
   // private val database = mutable.Map[UUID, Job]()
 
@@ -50,19 +51,24 @@ class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends Http4s
   //     active = true
   //   ).pure[F]
 
+  // refined: check data at compile time. But checked at compile time increases compilation time.
+  // Regex matching difficult in refined.
+
   // Test case: http post localhost:4041/api/jobs/create company='Rock the JVM' title='Software Engineer' description='best job' externalUrl='rockthejvm.com' remote=false location='NYC'
   private val createJobRoute: HttpRoutes[F] = HttpRoutes.of[F] { case req @ POST -> Root / "create" =>
-    for {
-      // _ <- Logger[F].info("Trying to add job")
-      // http post localhost:4041/api/jobs/create < src/main/resources/payloads/jobinfo.json
-      jobInfo <- req.as[JobInfo].logError(e => s"Parsing payload failed: $e") // F[JobInfo]
-      // _       <- Logger[F].info(s"Parsed job info: $jobInfo")
-      // job <- createJob(jobInfo) // commented on Lesson "A Full Jobs CRUD App"
-      jobId <- jobs.create("TODO@rockthejvm.com", jobInfo)
-      // _       <- Logger[F].info(s"Created job: $job")
-      // _    <- database.put(job.id, job).pure[F] // FP里面一个没有Type parameter的语句，在for里面用pure方法强行加上F[...] commented on Lesson "A Full Jobs CRUD App"
-      resp <- Created(jobId)
-    } yield resp
+    req.validate[JobInfo] { jobInfo =>
+      for {
+        // _ <- Logger[F].info("Trying to add job")
+        // http post localhost:4041/api/jobs/create < src/main/resources/payloads/jobinfo.json
+        // jobInfo <- req.as[JobInfo].logError(e => s"Parsing payload failed: $e") // F[JobInfo]
+        // _       <- Logger[F].info(s"Parsed job info: $jobInfo")
+        // job <- createJob(jobInfo) // commented on Lesson "A Full Jobs CRUD App"
+        jobId <- jobs.create("TODO@rockthejvm.com", jobInfo)
+        // _       <- Logger[F].info(s"Created job: $job")
+        // _    <- database.put(job.id, job).pure[F] // FP里面一个没有Type parameter的语句，在for里面用pure方法强行加上F[...] commented on Lesson "A Full Jobs CRUD App"
+        resp <- Created(jobId)
+      } yield resp
+    }
   }
 
   // PUT /jobs/uuid {jobInfo}
@@ -75,14 +81,16 @@ class JobRoutes[F[_]: Concurrent: Logger] private (jobs: Jobs[F]) extends Http4s
     //       resp    <- Ok()
     //     } yield resp
     //   case None => NotFound(FailureResponses(s"Cannot update job $id: not found"))
-    for {
-      jobInfo     <- req.as[JobInfo]
-      maybeNewJob <- jobs.update(id, jobInfo)
-      resp <- maybeNewJob match {
-        case Some(job) => Ok()
-        case None      => NotFound(FailureResponses(s"Cannot update job $id: not found"))
-      }
-    } yield resp
+    req.validate[JobInfo] { jobInfo =>
+      for {
+        // jobInfo     <- req.as[JobInfo]
+        maybeNewJob <- jobs.update(id, jobInfo)
+        resp <- maybeNewJob match {
+          case Some(job) => Ok()
+          case None      => NotFound(FailureResponses(s"Cannot update job $id: not found"))
+        }
+      } yield resp
+    }
   }
 
   // DELETE /jobs/uuid

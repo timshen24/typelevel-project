@@ -12,13 +12,13 @@ import org.http4s.dsl.*
 import org.http4s.implicits.*
 import org.scalatest.matchers.should.Matchers
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import org.typelevel.log4cats.Logger
 
 import java.util.UUID
 
 import com.rockthejvm.jobsboard.domain.job.*
 import com.rockthejvm.jobsboard.core.*
 import com.rockthejvm.jobsboard.fixtures.*
-import org.typelevel.log4cats.Logger
 
 //~Test/compile
 class JobRoutesSpec
@@ -53,6 +53,8 @@ class JobRoutesSpec
     override def delete(id: UUID): IO[Int] =
       if (id == AwesomeJobUuid) IO.pure(1)
       else IO.pure(0)
+
+    override def count(): IO[Int] = IO.pure(1)
   }
 
   given logger: Logger[IO] = Slf4jLogger.getLogger[IO]

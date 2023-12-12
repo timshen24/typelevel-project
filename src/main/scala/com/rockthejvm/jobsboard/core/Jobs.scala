@@ -23,6 +23,8 @@ trait Jobs[F[_]] {
   def update(id: UUID, jobInfo: JobInfo): F[Option[Job]]
 
   def delete(id: UUID): F[Int]
+
+  def count(): F[Int]
 }
 
 class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[F] {
@@ -70,27 +72,7 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
       .transact(xa)
 
   override def all(): F[List[Job]] =
-    sql"""select 
-      id,
-      date,
-      ownerEmail,
-      company,
-      title,
-      description,
-      externalUrl,
-      remote,
-      location,
-      salaryLo,
-      salaryHi,
-      currency,
-      country,
-      tags,
-      image,
-      seniority,
-      other,
-      active
-    FROM jobs  
-      """
+    sql"SELECT * FROM jobs"
       .query[Job]
       .to[List]
       .transact(xa)
@@ -152,6 +134,14 @@ class LiveJobs[F[_]: MonadCancelThrow] private (xa: Transactor[F]) extends Jobs[
       WHERE id = ${id}
     """.update.run
       .transact(xa)
+
+  override def count(): F[Int] =
+    sql"""
+      SELECT count(1) FROM jobs
+    """
+      .query[Int]
+      .unique
+      .transact(xa)
 }
 
 object LiveJobs {
@@ -208,10 +198,10 @@ object LiveJobs {
           description = description,
           externalUrl = externalUrl,
           remote = remote,
+          location = location,
           salaryLo = salaryLo,
           salaryHi = salaryHi,
           currency = currency,
-          location = location,
           country = country,
           tags = tags,
           image = image,
